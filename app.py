@@ -617,59 +617,63 @@ def visualize_graph(graph, node_labels, title="Graph"):
     # --------------------------------------------------
     # 3. Streamlit container (NO CROPPING)
     # --------------------------------------------------
+    initial_zoom = 0.20      # <<< TRY VALUES: 0.45, 0.35, 0.25, 0.20, 0.15, 0.10
+    initial_pan_x = 0        # <<< shift left/right (positive → right)
+    initial_pan_y = 0        # <<< shift up/down (positive → down)
+
     components.html(
-    f"""
-    <div style="
-        width: 100%;
-        max-width: 1800px;
-        height: 800px;
-        margin: 0 auto;
-        padding: 20px;
-        background: linear-gradient(135deg,#f8f9fa,#e9ecef);
-        border-radius: 18px;
-        border: 1px solid #e9ecef;
-        box-shadow: 0 3px 12px rgba(0,0,0,0.05);
-        overflow: hidden;
-    ">
+        f"""
+        <div style="
+            width: 100%;
+            max-width: 1800px;
+            height: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg,#f8f9fa,#e9ecef);
+            border-radius: 18px;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+        ">
 
-        <div id="svg_container" style="width:100%; height:100%; overflow:hidden;">
-            {svg}
+            <div id="svg_container" style="width:100%; height:100%; overflow:hidden;">
+                {svg}
+            </div>
+
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/svg-pan-zoom/3.6.1/svg-pan-zoom.min.js"></script>
+
+            <script>
+                const svgEl = document.querySelector('#svg_container svg');
+
+                // Make responsive
+                svgEl.removeAttribute('width');
+                svgEl.removeAttribute('height');
+                svgEl.style.width = "100%";
+                svgEl.style.height = "100%";
+
+                // Init pan/zoom
+                const instance = svgPanZoom(svgEl, {{
+                    zoomEnabled: true,
+                    controlIconsEnabled: true,
+                    fit: false,         // <<< IMPORTANT: disable auto fit so manual zoom works
+                    center: false,
+                    minZoom: 0.01,
+                    maxZoom: 10,
+                    contain: false
+                }});
+
+                // Apply manual zoom and pan
+                setTimeout(() => {{
+                    instance.zoom({initial_zoom});
+                    instance.pan({{ x: {initial_pan_x}, y: {initial_pan_y} }});
+                }}, 50);
+            </script>
+
         </div>
-
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/svg-pan-zoom/3.6.1/svg-pan-zoom.min.js"></script>
-
-        <script>
-            const svgEl = document.querySelector('#svg_container svg');
-
-            // Ensure responsive SVG
-            svgEl.removeAttribute('width');
-            svgEl.removeAttribute('height');
-            svgEl.style.width = "100%";
-            svgEl.style.height = "100%";
-
-            // Enable pan + zoom
-            const instance = svgPanZoom(svgEl, {{
-                zoomEnabled: true,
-                controlIconsEnabled: true,
-                fit: true,
-                center: true,
-                minZoom: 0.05,
-                maxZoom: 10,
-                contain: false
-            }});
-
-            // FORCE initial zoom so ENTIRE GRAPH fits inside the frame
-            setTimeout(() => {{
-                instance.zoom(0.28);        // try 0.20–0.35 for best fit
-                instance.center();
-            }}, 50);
-        </script>
-
-    </div>
-    """,
-    height=850,
-    scrolling=False
-)
+        """,
+        height=850,
+        scrolling=False
+    )
 
 # -----------------------------------------------------------
 # UI LAYOUT
