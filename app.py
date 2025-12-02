@@ -617,7 +617,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
     # --------------------------------------------------
     # 3. Streamlit container (NO CROPPING)
     # --------------------------------------------------
-    initial_zoom = 0.45      # <<< TRY VALUES: 0.45, 0.35, 0.25, 0.20, 0.15, 0.10
+    initial_zoom = 0.1     # <<< TRY VALUES: 0.45, 0.35, 0.25, 0.20, 0.15, 0.10
     initial_pan_x = -40        # <<< shift left/right (positive → right)
     initial_pan_y = 0        # <<< shift up/down (positive → down)
 
