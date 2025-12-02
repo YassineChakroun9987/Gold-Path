@@ -519,216 +519,77 @@ def compute_path_totals(path, orig_time, orig_cost, orig_risk,
 # -----------------------------------------------------------
 # GRAPHVIZ VISUALIZATION
 # -----------------------------------------------------------
+import matplotlib.pyplot as plt
+import networkx as nx
+import streamlit as st
+import io
+
 def visualize_graph(graph, node_labels, title="Graph"):
+    V = len(graph)
+
+    # Color palette
     dark_pastels = [
         "#7BB5C8", "#E58A87", "#E5B08A", "#AFCF95", "#C7DAA3",
         "#8ECBCB", "#E39A9A", "#D3A9A7", "#A6AFD1", "#CB97BC",
         "#D2C088", "#9FBEB7"
     ]
-    V = len(graph)
-    node_colors = {str(i): dark_pastels[i % len(dark_pastels)] for i in range(V)}
+    node_colors = [dark_pastels[i % len(dark_pastels)] for i in range(V)]
 
-    dot = Digraph(engine="neato")
-
-    # -------------------------------
-    # MUCH BETTER SPACING + BIGGER WIDTH
-    # -------------------------------
-    dot.attr(
-        overlap="false",
-        splines="true",
-        dpi="140",
-        size="1",          # wider graph
-        ratio="0.2",
-        nodesep="1.2",         # horizontal spacing
-        ranksep="1.3",         # vertical spacing
-        K="0.8"                # stronger repulsion → more spacing
-    )
-
-    # Transparent background (SVG)
-    dot.attr(bgcolor="transparent")
-
+    # Build NX graph
+    G = nx.DiGraph()
     for i in range(V):
-        dot.node(
-            str(i),
-            node_labels[i],
-            shape="circle",
-            style="filled",
-            fillcolor=node_colors[str(i)],
-            color="black",
-            fontsize="16",
-            width="1.1"
-        )
+        G.add_node(i, label=node_labels[i])
 
     for i in range(V):
         for j in range(V):
             if i != j and graph[i][j] != 9999:
-                dot.edge(
-                    str(i), str(j),
-                    label=str(round(graph[i][j], 2)),
-                    color=node_colors[str(i)],
-                    fontcolor=node_colors[str(i)],
-                    arrowsize="0.9",
-                    fontsize="12"
-                )
+                G.add_edge(i, j, weight=graph[i][j])
 
-    import tempfile, os
-    with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = os.path.join(tmpdir, "graph")
-        dot.render(filepath, format="svg", cleanup=True)
-        with open(filepath + ".svg", "r", encoding="utf-8") as f:
-            svg = f.read()
+    # Layout (spring == neato-like)
+    pos = nx.spring_layout(G, seed=42, k=0.8)
 
-    # ---------------------------------------
-    # THEMED BACKGROUND FOR THE GRAPH CONTAINER
-    # Matches Streamlit website palette
-    # ---------------------------------------
-    components.html(
-            f"""
-            <div style="
-                width: 100%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin: 0 auto;
-            ">
-                <div style="
-                    width: 100%;
-                    max-width: 1600px;
-                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                    border-radius: 18px;
-                    padding: 30px;
-                    box-shadow: 0 3px 12px rgba(0,0,0,0.05);
-                    border: 1px solid #e9ecef;
-                    overflow: hidden;
-                ">
-                    <div style="
-                        width: 100%;
-                        height: auto;
-                    ">
-                        <svg
-                            style="width: 100%; height: auto;"
-                            preserveAspectRatio="xMidYMid meet"
-                        >
-                            {svg}
-                        </svg>
-                    </div>
-                </div>
-            </div>
-            """,
-            height=1000,
-            scrolling=False,
-        )
-def visualize_graph(graph, node_labels, title="Graph"):
-    dark_pastels = [
-        "#7BB5C8", "#E58A87", "#E5B08A", "#AFCF95", "#C7DAA3",
-        "#8ECBCB", "#E39A9A", "#D3A9A7", "#A6AFD1", "#CB97BC",
-        "#D2C088", "#9FBEB7"
-    ]
-    V = len(graph)
-    node_colors = {str(i): dark_pastels[i % len(dark_pastels)] for i in range(V)}
+    # Prepare figure
+    fig, ax = plt.subplots(figsize=(14, 8))
+    ax.set_facecolor("#f8f9fa")
+    plt.axis('off')
 
-    dot = Digraph(engine="neato")
-
-    # Graphviz parameters
-    dot.attr(
-        overlap="false",
-        splines="true",
-        dpi="120",
-        size="10,5!",
-        ratio="compress",
-        nodesep="1.1",
-        ranksep="1.1",
-        K="0.8",
-        bgcolor="transparent"
+    # Draw nodes
+    nx.draw_networkx_nodes(
+        G, pos,
+        node_color=node_colors,
+        node_size=1200,
+        edgecolors="black"
     )
 
-    # Add nodes
-    for i in range(V):
-        dot.node(
-            str(i),
-            node_labels[i],
-            shape="circle",
-            style="filled",
-            fillcolor=node_colors[str(i)],
-            color="black",
-            fontsize="16",
-            width="1.1"
-        )
-
-    # Add edges
-    for i in range(V):
-        for j in range(V):
-            if i != j and graph[i][j] != 9999:
-                dot.edge(
-                    str(i), str(j),
-                    label=str(round(graph[i][j], 2)),
-                    color=node_colors[str(i)],
-                    fontcolor=node_colors[str(i)],
-                    arrowsize="0.9",
-                    fontsize="12"
-                )
-
-    # Render SVG to temp
-    import tempfile, os, re
-    with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = os.path.join(tmpdir, "graph")
-        dot.render(filepath, format="svg", cleanup=True)
-        with open(filepath + ".svg", "r", encoding="utf-8") as f:
-            svg = f.read()
-
-    # -------------------------------------------------------
-    #  FIX CROPPING — MAKE SVG RESPONSIVE
-    # -------------------------------------------------------
-
-    # Remove fixed width/height attributes
-    svg = re.sub(r'width="[^"]+"', 'width="100%"', svg)
-    svg = re.sub(r'height="[^"]+"', 'height="100%"', svg)
-
-    # Make the viewBox scale properly
-    if 'preserveAspectRatio' in svg:
-        svg = re.sub(r'preserveAspectRatio="[^"]+"', 'preserveAspectRatio="xMidYMid meet"', svg)
-    else:
-        svg = svg.replace("<svg", '<svg preserveAspectRatio="xMidYMid meet"')
-
-    # Remove anything forcing huge canvas
-    svg = svg.replace("pt", "")
-    svg = svg.replace("px", "")
-
-    # -------------------------------------------------------
-    # EMBED RESPONSIVE SVG IN STREAMLIT
-    # -------------------------------------------------------
-    components.html(
-        f"""
-        <div style="
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0 auto;
-        ">
-            <div style="
-                width: 100%;
-                max-width: 1800px;
-                height: 900px;
-                padding: 25px;
-                border-radius: 18px;
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                box-shadow: 0 3px 12px rgba(0,0,0,0.05);
-                border: 1px solid #e9ecef;
-                overflow: hidden;
-            ">
-                <div style="
-                    width: 100%;
-                    height: 100%;
-                ">
-                    {svg}
-                </div>
-            </div>
-        </div>
-        """,
-        height=950,
-        scrolling=False,
+    # Draw edges
+    nx.draw_networkx_edges(
+        G, pos,
+        arrowstyle="-|>",
+        arrowsize=20,
+        edge_color="gray"
     )
+
+    # Draw labels
+    nx.draw_networkx_labels(
+        G, pos,
+        labels={i: node_labels[i] for i in range(V)},
+        font_size=10,
+        font_color="black"
+    )
+
+    # Draw edge labels
+    edge_labels = {(i, j): f"{graph[i][j]:.2f}"
+                   for i, j in G.edges()}
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
+
+    # Convert to PNG buffer
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", bbox_inches="tight", dpi=150)
+    plt.close(fig)
+    buf.seek(0)
+
+    # Streamlit display
+    st.image(buf, use_container_width=True)
 
 # -----------------------------------------------------------
 # UI LAYOUT
