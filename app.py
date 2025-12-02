@@ -629,7 +629,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
             border:1px solid #e9ecef;
             box-shadow:0 3px 12px rgba(0,0,0,0.05);
         ">
-            <div style="width:100%; height:900px; overflow:hidden;">
+            <div style="width:100%; height:auto; overflow:visible;">
                 {svg}
             </div>
         </div>
