@@ -538,7 +538,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
         splines="true",
         dpi="140",
         size="6",          # wider graph
-        ratio="compress",
+        ratio="0.5",
         nodesep="1.2",         # horizontal spacing
         ranksep="1.3",         # vertical spacing
         K="0.8"                # stronger repulsion → more spacing
@@ -629,23 +629,20 @@ def visualize_graph(graph, node_labels, title="Graph"):
 
     dot = Digraph(engine="neato")
 
-    # -------------------------------
-    # MUCH BETTER SPACING + BIGGER WIDTH
-    # -------------------------------
+    # Graphviz parameters
     dot.attr(
         overlap="false",
         splines="true",
-        dpi="140",
-        size="6",          # wider graph
-        ratio="0.5",
-        nodesep="1.2",         # horizontal spacing
-        ranksep="1.3",         # vertical spacing
-        K="0.8"                # stronger repulsion → more spacing
+        dpi="120",
+        size="10,5!",
+        ratio="compress",
+        nodesep="1.1",
+        ranksep="1.1",
+        K="0.8",
+        bgcolor="transparent"
     )
 
-    # Transparent background (SVG)
-    dot.attr(bgcolor="transparent")
-
+    # Add nodes
     for i in range(V):
         dot.node(
             str(i),
@@ -658,6 +655,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
             width="1.1"
         )
 
+    # Add edges
     for i in range(V):
         for j in range(V):
             if i != j and graph[i][j] != 9999:
@@ -670,51 +668,67 @@ def visualize_graph(graph, node_labels, title="Graph"):
                     fontsize="12"
                 )
 
-    import tempfile, os
+    # Render SVG to temp
+    import tempfile, os, re
     with tempfile.TemporaryDirectory() as tmpdir:
         filepath = os.path.join(tmpdir, "graph")
         dot.render(filepath, format="svg", cleanup=True)
         with open(filepath + ".svg", "r", encoding="utf-8") as f:
             svg = f.read()
 
-    # ---------------------------------------
-    # THEMED BACKGROUND FOR THE GRAPH CONTAINER
-    # Matches Streamlit website palette
-    # ---------------------------------------
+    # -------------------------------------------------------
+    #  FIX CROPPING — MAKE SVG RESPONSIVE
+    # -------------------------------------------------------
+
+    # Remove fixed width/height attributes
+    svg = re.sub(r'width="[^"]+"', 'width="100%"', svg)
+    svg = re.sub(r'height="[^"]+"', 'height="100%"', svg)
+
+    # Make the viewBox scale properly
+    if 'preserveAspectRatio' in svg:
+        svg = re.sub(r'preserveAspectRatio="[^"]+"', 'preserveAspectRatio="xMidYMid meet"', svg)
+    else:
+        svg = svg.replace("<svg", '<svg preserveAspectRatio="xMidYMid meet"')
+
+    # Remove anything forcing huge canvas
+    svg = svg.replace("pt", "")
+    svg = svg.replace("px", "")
+
+    # -------------------------------------------------------
+    # EMBED RESPONSIVE SVG IN STREAMLIT
+    # -------------------------------------------------------
     components.html(
-    f"""
-    <div style="
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 0 auto;
-    ">
+        f"""
         <div style="
-            width: 95%;
-            height: 900px;  /* MUCH TALLER = NO SCROLL */
-            padding: 30px;
-            border-radius: 18px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            box-shadow: 0 3px 12px rgba(0,0,0,0.05);
-            border: 1px solid #e9ecef;
+            width: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;  /* Prevent scrollbars */
+            margin: 0 auto;
         ">
             <div style="
-                transform: scale(1.1); /* Optional slight zoom */
-                transform-origin: center;
+                width: 100%;
+                max-width: 1800px;
+                height: 900px;
+                padding: 25px;
+                border-radius: 18px;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+                border: 1px solid #e9ecef;
+                overflow: hidden;
             ">
-                {svg}
+                <div style="
+                    width: 100%;
+                    height: 100%;
+                ">
+                    {svg}
+                </div>
             </div>
         </div>
-    </div>
-    """,
-    height=950,  # Matches the container so Streamlit doesn't shrink it
-    scrolling=False,
-)
+        """,
+        height=950,
+        scrolling=False,
+    )
 
 # -----------------------------------------------------------
 # UI LAYOUT
