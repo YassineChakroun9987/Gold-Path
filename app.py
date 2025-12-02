@@ -583,25 +583,41 @@ def visualize_graph(graph, node_labels, title="Graph"):
     # Matches Streamlit website palette
     # ---------------------------------------
     components.html(
-        f"""
-        <div style="
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0 auto;
-            padding: 25px;
-            border-radius: 16px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            box-shadow: 0 3px 12px rgba(0,0,0,0.05);
-            border: 1px solid #e9ecef;
-            max-width: 95%;
-        ">
-            <div style="width:100%; height:100%; overflow: hidden;">{svg}</div>
-        </div>
-        """,
-        height=700,
-        scrolling=True,
-    )
+            f"""
+            <div style="
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: 0 auto;
+            ">
+                <div style="
+                    width: 100%;
+                    max-width: 1600px;
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    border-radius: 18px;
+                    padding: 30px;
+                    box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+                    border: 1px solid #e9ecef;
+                    overflow: hidden;
+                ">
+                    <div style="
+                        width: 100%;
+                        height: auto;
+                    ">
+                        <svg
+                            style="width: 100%; height: auto;"
+                            preserveAspectRatio="xMidYMid meet"
+                        >
+                            {svg}
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            """,
+            height=1000,
+            scrolling=False,
+        )
 def visualize_graph(graph, node_labels, title="Graph"):
     dark_pastels = [
         "#7BB5C8", "#E58A87", "#E5B08A", "#AFCF95", "#C7DAA3",
