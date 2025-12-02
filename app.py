@@ -641,19 +641,28 @@ def visualize_graph(graph, node_labels, title="Graph"):
         <script>
             const svgEl = document.querySelector('#svg_container svg');
 
+            // Ensure responsive SVG
             svgEl.removeAttribute('width');
             svgEl.removeAttribute('height');
             svgEl.style.width = "100%";
             svgEl.style.height = "100%";
 
-            svgPanZoom(svgEl, {{
+            // Enable pan + zoom
+            const instance = svgPanZoom(svgEl, {{
                 zoomEnabled: true,
                 controlIconsEnabled: true,
                 fit: true,
                 center: true,
-                minZoom: 0.3,
+                minZoom: 0.05,
+                maxZoom: 10,
                 contain: false
             }});
+
+            // FORCE initial zoom so ENTIRE GRAPH fits inside the frame
+            setTimeout(() => {{
+                instance.zoom(0.28);        // try 0.20–0.35 for best fit
+                instance.center();
+            }}, 50);
         </script>
 
     </div>
