@@ -519,77 +519,124 @@ def compute_path_totals(path, orig_time, orig_cost, orig_risk,
 # -----------------------------------------------------------
 # GRAPHVIZ VISUALIZATION
 # -----------------------------------------------------------
-import matplotlib.pyplot as plt
-import networkx as nx
-import streamlit as st
-import io
-
 def visualize_graph(graph, node_labels, title="Graph"):
-    V = len(graph)
+    import re
+    import tempfile
+    import os
+    from graphviz import Digraph
+    import streamlit.components.v1 as components
 
-    # Color palette
     dark_pastels = [
         "#7BB5C8", "#E58A87", "#E5B08A", "#AFCF95", "#C7DAA3",
         "#8ECBCB", "#E39A9A", "#D3A9A7", "#A6AFD1", "#CB97BC",
         "#D2C088", "#9FBEB7"
     ]
-    node_colors = [dark_pastels[i % len(dark_pastels)] for i in range(V)]
+    V = len(graph)
+    node_colors = {str(i): dark_pastels[i % len(dark_pastels)] for i in range(V)}
 
-    # Build NX graph
-    G = nx.DiGraph()
+    dot = Digraph(engine="neato")
+
+    # Better spacing but WITHOUT forcing huge size
+    dot.attr(
+        overlap="false",
+        splines="true",
+        dpi="96",
+        ratio="compress",
+        nodesep="1.0",
+        ranksep="1.0",
+        K="0.8",
+        bgcolor="transparent"
+    )
+
     for i in range(V):
-        G.add_node(i, label=node_labels[i])
+        dot.node(
+            str(i),
+            node_labels[i],
+            shape="circle",
+            style="filled",
+            fillcolor=node_colors[str(i)],
+            color="black",
+            fontsize="16",
+            width="1.0"
+        )
 
     for i in range(V):
         for j in range(V):
             if i != j and graph[i][j] != 9999:
-                G.add_edge(i, j, weight=graph[i][j])
+                dot.edge(
+                    str(i), str(j),
+                    label=str(round(graph[i][j], 2)),
+                    color=node_colors[str(i)],
+                    fontcolor=node_colors[str(i)],
+                    arrowsize="0.9",
+                    fontsize="12"
+                )
 
-    # Layout (spring == neato-like)
-    pos = nx.spring_layout(G, seed=42, k=0.8)
+    # Render SVG
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filepath = os.path.join(tmpdir, "graph")
+        dot.render(filepath, format="svg", cleanup=True)
+        with open(filepath + ".svg", "r", encoding="utf-8") as f:
+            svg = f.read()
 
-    # Prepare figure
-    fig, ax = plt.subplots(figsize=(14, 8))
-    ax.set_facecolor("#f8f9fa")
-    plt.axis('off')
+    # --------------------------------------------------
+    # 1. Extract original viewBox or width/height
+    # --------------------------------------------------
+    viewbox_match = re.search(r'viewBox="([\d\.\s\-]+)"', svg)
+    if viewbox_match:
+        original_viewbox = viewbox_match.group(1)
+    else:
+        # fallback to width/height parsing
+        w = re.search(r'width="([\d\.]+)', svg)
+        h = re.search(r'height="([\d\.]+)', svg)
+        if w and h:
+            original_viewbox = f"0 0 {w.group(1)} {h.group(1)}"
+        else:
+            original_viewbox = "0 0 2000 1200"   # safe fallback
 
-    # Draw nodes
-    nx.draw_networkx_nodes(
-        G, pos,
-        node_color=node_colors,
-        node_size=1200,
-        edgecolors="black"
+    # --------------------------------------------------
+    # 2. Apply a NORMALIZED viewBox for scaling
+    # --------------------------------------------------
+    svg = re.sub(
+        r'viewBox="[^"]+"',
+        f'viewBox="{original_viewbox}"',
+        svg
     )
 
-    # Draw edges
-    nx.draw_networkx_edges(
-        G, pos,
-        arrowstyle="-|>",
-        arrowsize=20,
-        edge_color="gray"
+    # Remove fixed width/height
+    svg = re.sub(r'width="[^"]+"', 'width="100%"', svg)
+    svg = re.sub(r'height="[^"]+"', 'height="100%"', svg)
+
+    # Force responsive mode
+    if "preserveAspectRatio" in svg:
+        svg = re.sub(r'preserveAspectRatio="[^"]+"',
+                     'preserveAspectRatio="xMidYMid meet"', svg)
+    else:
+        svg = svg.replace("<svg", '<svg preserveAspectRatio="xMidYMid meet"')
+
+    # --------------------------------------------------
+    # 3. Streamlit container (NO CROPPING)
+    # --------------------------------------------------
+    components.html(
+        f"""
+        <div style="
+            width:100%;
+            max-width:1800px;
+            margin:0 auto;
+            padding:20px;
+            background:linear-gradient(135deg,#f8f9fa,#e9ecef);
+            border-radius:18px;
+            border:1px solid #e9ecef;
+            box-shadow:0 3px 12px rgba(0,0,0,0.05);
+        ">
+            <div style="width:100%; height:900px; overflow:hidden;">
+                {svg}
+            </div>
+        </div>
+        """,
+        height=950,
+        scrolling=False,
     )
-
-    # Draw labels
-    nx.draw_networkx_labels(
-        G, pos,
-        labels={i: node_labels[i] for i in range(V)},
-        font_size=10,
-        font_color="black"
-    )
-
-    # Draw edge labels
-    edge_labels = {(i, j): f"{graph[i][j]:.2f}"
-                   for i, j in G.edges()}
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
-
-    # Convert to PNG buffer
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png", bbox_inches="tight", dpi=150)
-    plt.close(fig)
-    buf.seek(0)
-
-    # Streamlit display
-    st.image(buf, use_container_width=True)
 
 # -----------------------------------------------------------
 # UI LAYOUT
