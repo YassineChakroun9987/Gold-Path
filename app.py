@@ -634,7 +634,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
     ">
         <div style="
             width: 100%;
-            height: auto;
+            height: 50;
         ">
             {svg}
         </div>
