@@ -633,7 +633,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
         overflow-x: auto;
     ">
         <div style="
-            width: 100%;
+            width: 50;
             height: 50;
         ">
             {svg}
