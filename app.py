@@ -536,8 +536,8 @@ def visualize_graph(graph, node_labels, title="Graph"):
     dot.attr(
         overlap="false",
         splines="true",
-        dpi="200",
-        size="5",          # wider graph
+        dpi="140",
+        size="6",          # wider graph
         ratio="0.5",
         nodesep="1.2",         # horizontal spacing
         ranksep="1.3",         # vertical spacing
