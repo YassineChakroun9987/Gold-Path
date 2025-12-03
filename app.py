@@ -538,6 +538,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
 
     # Better spacing but WITHOUT forcing huge size
     dot.attr(
+        format="png",
         overlap="false",
         splines="true",
         dpi="96",
