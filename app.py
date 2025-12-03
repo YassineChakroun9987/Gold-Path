@@ -547,7 +547,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
         "splines": "true",
         "dpi": "96",
         "ratio": "0.5",
-        "size": "6,6!",
+        "size": "4,4!",
         "pad": "0.5",
         "margin": "0.2",
         "bgcolor": "transparent"
