@@ -261,23 +261,24 @@ p, li, span, div {
     border-radius: 16px;
     background: var(--card-bg);
     padding: 20px;
-    box-shadow: 
+    box-shadow:
         0 3px 12px var(--shadow),
         inset 0 1px 0 rgba(255, 255, 255, 0.7);
     animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid var(--border);
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0 auto;
-    max-width: 90%;
+
+    /* NEW important scaling rules */
+    max-width: 850px;   /* controls graph size */
+    width: 100%;        /* responsive */
+    margin: 0 auto;     /* center */
+    text-align: center; /* center contents */
 }
 
-/* Center the graph SVG */
-.graph-container svg {
-    display: block;
-    margin: 0 auto;
+/* Scale PNG inside container */
+.graph-container img {
+    width: 100% !important;
+    height: auto !important;
+    object-fit: contain !important;
 }
 
 /* TIME WEIGHT slider */
@@ -612,7 +613,9 @@ def visualize_graph(graph, node_labels, title="Graph"):
         # --------------------------------------------------
         # Display PNG
         # --------------------------------------------------
-        st.image(png_path, caption=title, use_container_width=True)
+        st.markdown("<div class='graph-container'>", unsafe_allow_html=True)
+        st.image(png_path, caption=title, width="100%")
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 
