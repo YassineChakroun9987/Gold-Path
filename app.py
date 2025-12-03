@@ -556,8 +556,8 @@ def visualize_graph(graph, node_labels, title="Graph"):
             style="filled",
             fillcolor=node_colors[str(i)],
             color="black",
-            fontsize="16",
-            width="1.0"
+            fontsize="10",
+            width="0.5"
         )
 
     for i in range(V):
