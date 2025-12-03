@@ -620,12 +620,19 @@ def visualize_graph(graph, node_labels, title="Graph"):
     # --------------------------------------------------
     # Convert SVG → PNG and display it
     # --------------------------------------------------
+    
+    with open(filepath + ".svg", "r", encoding="utf-8") as f:
+        svg_data = f.read()
+    
+    # Convert using bytestring (SAFE on Streamlit Cloud)
     import cairosvg
-    
     png_path = filepath + ".png"
-    cairosvg.svg2png(url=filepath + ".svg", write_to=png_path)
+    cairosvg.svg2png(bytestring=svg_data.encode("utf-8"), write_to=png_path)
     
+    # Display PNG
     st.image(png_path, caption=title, use_container_width=True)
+
+    
 
 
 # -----------------------------------------------------------
