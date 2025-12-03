@@ -545,6 +545,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
         overlap="false",
         splines="true",
         dpi="96",
+        size="7",
         ratio="compress",
         nodesep="1.0",
         ranksep="1.0",
