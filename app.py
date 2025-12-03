@@ -423,15 +423,7 @@ div[data-testid="stVerticalBlock"] > div > div {
     width: 100%;
 }
 
-/* ---------- FORCE WHITE TEXT IN UPLOADER ---------- */
-div[data-testid="stFileUploader"] span {
-    color: white !important;
-}
 
-/* Make sure ALL text in uploader is white */
-div[data-testid="stFileUploader"] * {
-    color: white !important;
-}
 
 /* ---------- BUTTON TEXT WHITE ---------- */
 .stButton button, .stButton button span, .stButton button p {
