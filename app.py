@@ -535,17 +535,16 @@ def visualize_graph(graph, node_labels, title="Graph"):
     node_colors = {str(i): dark_pastels[i % len(dark_pastels)] for i in range(V)}
 
     dot = Digraph(engine="neato")
-    
-    # Use larger graph size with better spacing
+
+    # Better spacing but WITHOUT forcing huge size
     dot.attr(
         overlap="false",
         splines="true",
-        dpi="100",
-        ratio="auto",
-        nodesep="1.2",  # Increased node separation
-        ranksep="1.2",  # Increased rank separation
-        size="20,20",   # Fixed size for consistency
-        margin="0.5",
+        dpi="96",
+        ratio="compress",
+        nodesep="1.0",
+        ranksep="1.0",
+        K="0.8",
         bgcolor="transparent"
     )
 
@@ -558,8 +557,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
             fillcolor=node_colors[str(i)],
             color="black",
             fontsize="16",
-            width="0.8",
-            height="0.8"
+            width="1.0"
         )
 
     for i in range(V):
@@ -571,8 +569,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
                     color=node_colors[str(i)],
                     fontcolor=node_colors[str(i)],
                     arrowsize="0.9",
-                    fontsize="12",
-                    penwidth="1.5"
+                    fontsize="12"
                 )
 
     # Render SVG
@@ -583,57 +580,34 @@ def visualize_graph(graph, node_labels, title="Graph"):
             svg = f.read()
 
     # --------------------------------------------------
-    # NEW: Extract and normalize the viewBox
+    # 1. Extract original viewBox or width/height
     # --------------------------------------------------
     viewbox_match = re.search(r'viewBox="([\d\.\s\-]+)"', svg)
     if viewbox_match:
-        # Parse viewBox values
-        vb_parts = viewbox_match.group(1).split()
-        if len(vb_parts) == 4:
-            try:
-                # Convert to float
-                x, y, width, height = map(float, vb_parts)
-                
-                # If the graph is too small, scale it up
-                if width < 200 or height < 200:
-                    scale_factor = max(200/width, 200/height)
-                    width *= scale_factor
-                    height *= scale_factor
-                    
-                # If the graph is too large, scale it down
-                if width > 2000 or height > 2000:
-                    scale_factor = min(2000/width, 2000/height)
-                    width *= scale_factor
-                    height *= scale_factor
-                
-                # Create normalized viewBox (centered)
-                new_viewbox = f"0 0 {width:.2f} {height:.2f}"
-                svg = re.sub(
-                    r'viewBox="[^"]+"',
-                    f'viewBox="{new_viewbox}"',
-                    svg
-                )
-            except:
-                # Fallback if parsing fails
-                svg = re.sub(
-                    r'viewBox="[^"]+"',
-                    'viewBox="0 0 1000 800"',
-                    svg
-                )
+        original_viewbox = viewbox_match.group(1)
     else:
-        # If no viewBox found, add one
-        svg = re.sub(
-            r'<svg',
-            '<svg viewBox="0 0 1000 800"',
-            svg,
-            count=1
-        )
+        # fallback to width/height parsing
+        w = re.search(r'width="([\d\.]+)', svg)
+        h = re.search(r'height="([\d\.]+)', svg)
+        if w and h:
+            original_viewbox = f"0 0 {w.group(1)} {h.group(1)}"
+        else:
+            original_viewbox = "0 0 2000 1200"   # safe fallback
 
-    # Remove fixed width/height and make responsive
+    # --------------------------------------------------
+    # 2. Apply a NORMALIZED viewBox for scaling
+    # --------------------------------------------------
+    svg = re.sub(
+        r'viewBox="[^"]+"',
+        f'viewBox="{original_viewbox}"',
+        svg
+    )
+
+    # Remove fixed width/height
     svg = re.sub(r'width="[^"]+"', 'width="100%"', svg)
     svg = re.sub(r'height="[^"]+"', 'height="100%"', svg)
 
-    # Ensure responsive scaling
+    # Force responsive mode
     if "preserveAspectRatio" in svg:
         svg = re.sub(r'preserveAspectRatio="[^"]+"',
                      'preserveAspectRatio="xMidYMid meet"', svg)
@@ -641,32 +615,17 @@ def visualize_graph(graph, node_labels, title="Graph"):
         svg = svg.replace("<svg", '<svg preserveAspectRatio="xMidYMid meet"')
 
     # --------------------------------------------------
-    # NEW: Improved container with dynamic scaling
+    # 3. Streamlit container (NO CROPPING)
     # --------------------------------------------------
-    # Dynamically determine initial zoom based on graph size
-    viewbox_match = re.search(r'viewBox="([\d\.\s\-]+)"', svg)
-    if viewbox_match:
-        vb_parts = viewbox_match.group(1).split()
-        if len(vb_parts) == 4:
-            try:
-                _, _, width, height = map(float, vb_parts)
-                # Calculate zoom to fit container (800x600 area)
-                target_width, target_height = 800, 600
-                zoom_x = target_width / width if width > 0 else 0.3
-                zoom_y = target_height / height if height > 0 else 0.3
-                initial_zoom = min(zoom_x, zoom_y, 1.0) * 0.9  # 90% of fit
-            except:
-                initial_zoom = 0.25
-        else:
-            initial_zoom = 0.25
-    else:
-        initial_zoom = 0.25
+    initial_zoom = 0.20      # <<< TRY VALUES: 0.45, 0.35, 0.25, 0.20, 0.15, 0.10
+    initial_pan_x = 0        # <<< shift left/right (positive → right)
+    initial_pan_y = 0        # <<< shift up/down (positive → down)
 
-    # Create responsive HTML container
     components.html(
         f"""
         <div style="
             width: 100%;
+            max-width: 1800px;
             height: 800px;
             margin: 0 auto;
             padding: 20px;
@@ -675,58 +634,39 @@ def visualize_graph(graph, node_labels, title="Graph"):
             border: 1px solid #e9ecef;
             box-shadow: 0 3px 12px rgba(0,0,0,0.05);
             overflow: hidden;
-            position: relative;
         ">
 
-            <div id="svg_container" style="
-                width: 100%;
-                height: 100%;
-                overflow: hidden;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            ">
+            <div id="svg_container" style="width:100%; height:100%; overflow:hidden;">
                 {svg}
             </div>
 
             <script src="https://cdnjs.cloudflare.com/ajax/libs/svg-pan-zoom/3.6.1/svg-pan-zoom.min.js"></script>
 
             <script>
-                (function() {{
-                    const container = document.querySelector('#svg_container');
-                    const svgEl = container.querySelector('svg');
-                    
-                    // Make sure SVG fills container
-                    svgEl.style.width = '100%';
-                    svgEl.style.height = '100%';
-                    
-                    // Add a small delay to ensure DOM is ready
-                    setTimeout(() => {{
-                        try {{
-                            const instance = svgPanZoom(svgEl, {{
-                                zoomEnabled: true,
-                                controlIconsEnabled: true,
-                                fit: true,
-                                center: true,
-                                minZoom: 0.05,
-                                maxZoom: 10,
-                                contain: false,
-                                zoomScaleSensitivity: 0.4
-                            }});
-                            
-                            // Optional: Set initial zoom if needed
-                            setTimeout(() => {{
-                                instance.zoom({initial_zoom});
-                                instance.pan({{ x: 0, y: 0 }});
-                            }}, 100);
-                            
-                            // Make instance globally available for debugging
-                            window.svgPanZoomInstance = instance;
-                        }} catch (error) {{
-                            console.error('SVG Pan Zoom error:', error);
-                        }}
-                    }}, 100);
-                }})();
+                const svgEl = document.querySelector('#svg_container svg');
+
+                // Make responsive
+                svgEl.removeAttribute('width');
+                svgEl.removeAttribute('height');
+                svgEl.style.width = "100%";
+                svgEl.style.height = "100%";
+
+                // Init pan/zoom
+                const instance = svgPanZoom(svgEl, {{
+                    zoomEnabled: true,
+                    controlIconsEnabled: true,
+                    fit: false,         // <<< IMPORTANT: disable auto fit so manual zoom works
+                    center: false,
+                    minZoom: 0.01,
+                    maxZoom: 10,
+                    contain: false
+                }});
+
+                // Apply manual zoom and pan
+                setTimeout(() => {{
+                    instance.zoom({initial_zoom});
+                    instance.pan({{ x: {initial_pan_x}, y: {initial_pan_y} }});
+                }}, 50);
             </script>
 
         </div>
@@ -734,6 +674,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
         height=850,
         scrolling=False
     )
+
 # -----------------------------------------------------------
 # UI LAYOUT
 # -----------------------------------------------------------
