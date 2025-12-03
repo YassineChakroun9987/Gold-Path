@@ -306,7 +306,7 @@ div[data-testid="stSlider"] label:has(span:contains("Risk Weight")) ~ div input[
     background: #074273 !important;
     border: 2px solid #0A3D62 !important;
 }
-  
+
 
 /* ---------- ALERT MESSAGES ---------- */
 .stAlert {
@@ -436,7 +436,7 @@ div[data-testid="stFileUploader"] * {
 .stButton button, .stButton button span, .stButton button p {
     color: white !important;
 }
-            
+
 
 
 </style>
@@ -451,7 +451,7 @@ def shorten_edge(pos_u, pos_v, node_radius=0.08):
     x2, y2 = pos_v
     dx = x2 - x1
     dy = y2 - y1
-    dist = np.sqrt(dx*dx + dy*dy)
+    dist = np.sqrt(dx * dx + dy * dy)
 
     if dist == 0:
         return x2, y2
@@ -497,12 +497,11 @@ def reconstruct_path(i, j, next_node):
 # -----------------------------------------------------------
 def compute_path_totals(path, orig_time, orig_cost, orig_risk,
                         w_time, w_cost, w_risk):
-
     total_time = total_cost = total_risk = total_weighted = 0
 
     for k in range(len(path) - 1):
         i = path[k]
-        j = path[k+1]
+        j = path[k + 1]
 
         t = orig_time[i][j] if orig_time[i][j] != 9999 else 0
         c = orig_cost[i][j] if orig_cost[i][j] != 9999 else 0
@@ -511,7 +510,7 @@ def compute_path_totals(path, orig_time, orig_cost, orig_risk,
         total_time += t
         total_cost += c
         total_risk += r
-        total_weighted += w_time*t + w_cost*c + w_risk*r
+        total_weighted += w_time * t + w_cost * c + w_risk * r
 
     return total_weighted, total_time, total_cost, total_risk
 
@@ -524,19 +523,24 @@ def visualize_graph(graph, node_labels, title="Graph"):
     import tempfile
     import os
     from graphviz import Digraph
-    import streamlit.components.v1 as components
 
+    # -------------------------------------------------------------------
+    # COLORS
+    # -------------------------------------------------------------------
     dark_pastels = [
         "#7BB5C8", "#E58A87", "#E5B08A", "#AFCF95", "#C7DAA3",
         "#8ECBCB", "#E39A9A", "#D3A9A7", "#A6AFD1", "#CB97BC",
         "#D2C088", "#9FBEB7"
     ]
+
     V = len(graph)
     node_colors = {str(i): dark_pastels[i % len(dark_pastels)] for i in range(V)}
 
+    # -------------------------------------------------------------------
+    # BUILD GRAPHVIZ GRAPH
+    # -------------------------------------------------------------------
     dot = Digraph(engine="neato")
 
-    # Better spacing but WITHOUT forcing huge size
     dot.attr(
         overlap="false",
         splines="true",
@@ -572,56 +576,44 @@ def visualize_graph(graph, node_labels, title="Graph"):
                     fontsize="12"
                 )
 
-    # Render SVG
+    # -------------------------------------------------------------------
+    # RENDER GRAPHVIZ TO TEMP DIRECTORY
+    # -------------------------------------------------------------------
+    import cairosvg
+    import streamlit as st
+
     with tempfile.TemporaryDirectory() as tmpdir:
         filepath = os.path.join(tmpdir, "graph")
         dot.render(filepath, format="svg", cleanup=True)
-        with open(filepath + ".svg", "r", encoding="utf-8") as f:
-            svg = f.read()
 
-    # --------------------------------------------------
-    # 1. Extract original viewBox or width/height
-    # --------------------------------------------------
-    viewbox_match = re.search(r'viewBox="([\d\.\s\-]+)"', svg)
-    if viewbox_match:
-        original_viewbox = viewbox_match.group(1)
-    else:
-        # fallback to width/height parsing
-        w = re.search(r'width="([\d\.]+)', svg)
-        h = re.search(r'height="([\d\.]+)', svg)
-        if w and h:
-            original_viewbox = f"0 0 {w.group(1)} {h.group(1)}"
-        else:
-            original_viewbox = "0 0 2000 1200"   # safe fallback
+        # --------------------------------------------------
+        # Find actual SVG file (Graphviz naming varies)
+        # --------------------------------------------------
+        svg_file = None
+        for fname in os.listdir(tmpdir):
+            if fname.endswith(".svg"):
+                svg_file = os.path.join(tmpdir, fname)
+                break
 
-    # --------------------------------------------------
-    # 2. Apply a NORMALIZED viewBox for scaling
-    # --------------------------------------------------
-    svg = re.sub(
-        r'viewBox="[^"]+"',
-        f'viewBox="{original_viewbox}"',
-        svg
-    )
+        if svg_file is None:
+            st.error("Failed to generate SVG.")
+            return
 
-    # Remove fixed width/height
-    svg = re.sub(r'width="[^"]+"', 'width="100%"', svg)
-    svg = re.sub(r'height="[^"]+"', 'height="100%"', svg)
+        # --------------------------------------------------
+        # Read SVG and convert to PNG
+        # --------------------------------------------------
+        with open(svg_file, "r", encoding="utf-8") as f:
+            svg_data = f.read()
 
-    # Force responsive mode
-    if "preserveAspectRatio" in svg:
-        svg = re.sub(r'preserveAspectRatio="[^"]+"',
-                     'preserveAspectRatio="xMidYMid meet"', svg)
-    else:
-        svg = svg.replace("<svg", '<svg preserveAspectRatio="xMidYMid meet"')
+        png_path = os.path.join(tmpdir, "graph.png")
+        cairosvg.svg2png(bytestring=svg_data.encode("utf-8"), write_to=png_path)
 
-    # --------------------------------------------------
-    # 3. Streamlit container (NO CROPPING)
-    # --------------------------------------------------
-    # --------------------------------------------------
-    # Convert SVG → PNG and display it
-    # --------------------------------------------------
-    
-    # Render SVG using Graphviz
+        # --------------------------------------------------
+        # Display PNG
+        # --------------------------------------------------
+        st.image(png_path, caption=title, use_container_width=True)
+
+
 with tempfile.TemporaryDirectory() as tmpdir:
     filepath = os.path.join(tmpdir, "graph")
     dot.render(filepath, format="svg", cleanup=True)
@@ -655,16 +647,12 @@ with tempfile.TemporaryDirectory() as tmpdir:
         # Convert SVG → PNG safely (Streamlit Cloud compatible)
         # --------------------------------------------------
         import cairosvg
+
         png_path = os.path.join(tmpdir, "graph.png")
         cairosvg.svg2png(bytestring=svg_data.encode("utf-8"), write_to=png_path)
 
         # Display PNG
         st.image(png_path, caption=title, use_container_width=True)
-
-
-
-    
-
 
 # -----------------------------------------------------------
 # UI LAYOUT
@@ -680,7 +668,6 @@ Each sheet must contain a square adjacency matrix with identical node names.
 </p>
 </div>
 """, unsafe_allow_html=True)
-
 
 # -----------------------------------------------------------
 # FILE UPLOAD
@@ -721,7 +708,7 @@ if not file:
 
 if file:
     st.markdown("<div class='section-title'>Matrix Validation</div>", unsafe_allow_html=True)
-    
+
     try:
         time_df = pd.read_excel(file, sheet_name="Time", index_col=0)
         cost_df = pd.read_excel(file, sheet_name="Cost", index_col=0)
@@ -732,14 +719,18 @@ if file:
 
     # Validate
     if time_df.shape[0] != time_df.shape[1]:
-        st.error("Time matrix is not square."); st.stop()
+        st.error("Time matrix is not square.");
+        st.stop()
     if cost_df.shape[0] != cost_df.shape[1]:
-        st.error("Cost matrix is not square."); st.stop()
+        st.error("Cost matrix is not square.");
+        st.stop()
     if risk_df.shape[0] != risk_df.shape[1]:
-        st.error("Risk matrix is not square."); st.stop()
+        st.error("Risk matrix is not square.");
+        st.stop()
 
     if not (list(time_df.index) == list(cost_df.index) == list(risk_df.index)):
-        st.error("Sheet node labels do not match."); st.stop()
+        st.error("Sheet node labels do not match.");
+        st.stop()
 
     node_labels = list(time_df.index)
     V = len(node_labels)
@@ -759,10 +750,10 @@ if file:
     # Weights
     # -------------------------------------------------------
     st.markdown("<div class='section-title'>Weight Configuration</div>", unsafe_allow_html=True)
-    
+
     with st.container():
         col1, col2, col3 = st.columns(3)
-        
+
         with col1:
             w_time = st.slider("Time Weight", 0.0, 1.0, 0.33, 0.01, help="Importance of time in path optimization")
         with col2:
@@ -778,7 +769,7 @@ if file:
         # Display weight summary
         st.markdown("---")
         st.markdown("#### Normalized Weights")
-        
+
         cols = st.columns(3)
         with cols[0]:
             st.markdown(f"""
@@ -808,9 +799,9 @@ if file:
     st.markdown("<div class='section-title'>Compute Shortest Paths</div>", unsafe_allow_html=True)
 
     if st.button("Run Floyd-Warshall Algorithm", key="run_algo"):
-        
+
         with st.spinner("Computing optimal paths..."):
-            
+
             # Weighted combined graph
             st.markdown("<div class='card'>", unsafe_allow_html=True)
             st.markdown("#### Weighted Combined Matrix")
@@ -820,16 +811,16 @@ if file:
             for i in range(V):
                 for j in range(V):
                     if (
-                        (time_graph[i][j] == 9999 and w_time > 0) or
-                        (cost_graph[i][j] == 9999 and w_cost > 0) or
-                        (risk_graph[i][j] == 9999 and w_risk > 0)
+                            (time_graph[i][j] == 9999 and w_time > 0) or
+                            (cost_graph[i][j] == 9999 and w_cost > 0) or
+                            (risk_graph[i][j] == 9999 and w_risk > 0)
                     ):
                         final_graph[i][j] = 9999
                     else:
                         final_graph[i][j] = (
-                            w_time * time_graph[i][j] +
-                            w_cost * cost_graph[i][j] +
-                            w_risk * risk_graph[i][j]
+                                w_time * time_graph[i][j] +
+                                w_cost * cost_graph[i][j] +
+                                w_risk * risk_graph[i][j]
                         )
 
             # Display weighted matrix with gold headers
@@ -839,7 +830,7 @@ if file:
                     lambda x: "∞" if x == 9999 else f"{x:.2f}"
                 ),
                 use_container_width=True,
-                height=470   # Increase this value until the matrix fits
+                height=470  # Increase this value until the matrix fits
             )
 
             st.markdown("</div>", unsafe_allow_html=True)
@@ -854,7 +845,7 @@ if file:
 
             # PATH OUTPUT
             st.markdown("<div class='section-title'>All Shortest Paths</div>", unsafe_allow_html=True)
-            
+
             with st.container():
                 rows = []
                 for i in range(V):
@@ -887,15 +878,16 @@ if file:
                                 })
 
                 df_results = pd.DataFrame(rows)
-                
+
+
                 # Apply gradient styling based on values
                 def apply_gradient_styling(df):
                     # Define gradient classes for numeric columns
                     numeric_cols = ['Total Score', 'Total Time', 'Total Cost', 'Total Risk']
-                    
+
                     # Initialize style dictionary
                     styles = {}
-                    
+
                     for col in numeric_cols:
                         if col in df.columns:
                             # Get valid values (non-null)
@@ -905,7 +897,7 @@ if file:
                                 q1 = valid_values.quantile(0.25)
                                 q2 = valid_values.quantile(0.50)
                                 q3 = valid_values.quantile(0.75)
-                                
+
                                 # Apply gradient classes
                                 def get_gradient_class(val):
                                     if pd.isna(val):
@@ -918,16 +910,17 @@ if file:
                                         return 'gradient-high'
                                     else:
                                         return 'gradient-very-high'
-                                
+
                                 styles[col] = df[col].apply(get_gradient_class)
                             else:
                                 styles[col] = [''] * len(df)
-                    
+
                     return styles
-                
+
+
                 # Apply styling
                 gradient_styles = apply_gradient_styling(df_results)
-                
+
                 # Create styled dataframe
                 styled_df = df_results.style.set_table_styles([
                     {'selector': 'th', 'props': [
@@ -941,13 +934,13 @@ if file:
                         ('background-color', 'var(--accent-gold-lighter)')
                     ]}
                 ])
-                
+
                 # Apply gradient classes
                 for col, styles in gradient_styles.items():
                     styled_df = styled_df.set_td_classes(pd.DataFrame({
                         col: styles
                     }))
-                
+
                 # Display the dataframe
                 st.dataframe(
                     styled_df.format({
@@ -959,13 +952,13 @@ if file:
                     use_container_width=True,
                     height=400
                 )
-                
+
                 # Summary statistics
                 st.markdown("---")
                 valid_paths = df_results[df_results['Path'] != 'NO PATH']
-                
+
                 col1, col2, col3, col4 = st.columns(4)
-                
+
                 with col1:
                     st.markdown(f"""
                     <div class='metric-card'>
