@@ -446,7 +446,7 @@ div[data-testid="stFileUploader"] * {
 # -----------------------------------------------------------
 # UTIL: shorten edges (unchanged)
 # -----------------------------------------------------------
-def shorten_edge(pos_u, pos_v, node_radius=0.08):
+def shorten_edge(pos_u, pos_v, node_radius=0.05):
     x1, y1 = pos_u
     x2, y2 = pos_v
     dx = x2 - x1
