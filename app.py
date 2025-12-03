@@ -614,7 +614,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
         # Display PNG
         # --------------------------------------------------
         st.markdown("<div class='graph-container'>", unsafe_allow_html=True)
-        st.image(png_path, caption=title, width="100%")
+        st.image(png_path, caption=title, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 
