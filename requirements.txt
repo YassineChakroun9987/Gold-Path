@@ -4,4 +4,4 @@ numpy
 matplotlib
 networkx
 openpyxl
-graphviz
+graphviz>=0.20.0
