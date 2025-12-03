@@ -547,7 +547,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
         "splines": "true",
         "dpi": "96",
         "ratio": "0.5",
-        "size": "4",
+        "size": "6!",
         "pad": "0.5",
         "margin": "0.2",
         "bgcolor": "transparent"
@@ -580,38 +580,17 @@ def visualize_graph(graph, node_labels, title="Graph"):
     # -------------------------------------------------------------------
     # RENDER GRAPHVIZ TO TEMP DIRECTORY
     # -------------------------------------------------------------------
-    import cairosvg
     import streamlit as st
 
     with tempfile.TemporaryDirectory() as tmpdir:
         filepath = os.path.join(tmpdir, "graph")
-        dot.render(filepath, format="svg", cleanup=True)
 
-        # --------------------------------------------------
-        # Find actual SVG file (Graphviz naming varies)
-        # --------------------------------------------------
-        svg_file = None
-        for fname in os.listdir(tmpdir):
-            if fname.endswith(".svg"):
-                svg_file = os.path.join(tmpdir, fname)
-                break
+        # Direct PNG output from Graphviz → no cropping issues
+        dot.render(filepath, format="png", cleanup=True)
 
-        if svg_file is None:
-            st.error("Failed to generate SVG.")
-            return
+        png_path = filepath + ".png"
 
-        # --------------------------------------------------
-        # Read SVG and convert to PNG
-        # --------------------------------------------------
-        with open(svg_file, "r", encoding="utf-8") as f:
-            svg_data = f.read()
-
-        png_path = os.path.join(tmpdir, "graph.png")
-        cairosvg.svg2png(bytestring=svg_data.encode("utf-8"), write_to=png_path)
-
-        # --------------------------------------------------
-        # Display PNG
-        # --------------------------------------------------
+        # Display PNG directly
         st.markdown("<div class='graph-container'>", unsafe_allow_html=True)
         st.image(png_path, caption=title, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
