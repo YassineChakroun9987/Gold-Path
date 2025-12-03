@@ -540,7 +540,7 @@ def visualize_graph(graph, node_labels, title="Graph"):
     # -------------------------------------------------------------------
     # BUILD GRAPHVIZ GRAPH
     # -------------------------------------------------------------------
-    dot = Digraph(engine="neato")
+    dot = Digraph(engine="sfdp")
 
     dot.attr(
         overlap="false",
