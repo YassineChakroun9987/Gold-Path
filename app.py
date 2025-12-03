@@ -545,8 +545,8 @@ def visualize_graph(graph, node_labels, title="Graph"):
     dot.graph_attr.update({
         "overlap": "false",
         "splines": "true",
-        "dpi": "300",
-        "ratio": "0.2",
+        "dpi": "96",
+        "ratio": "0.3",
         "size": "4,4!",
         "pad": "0.5",
         "margin": "0.2",
