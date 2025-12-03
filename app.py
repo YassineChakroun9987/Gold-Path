@@ -761,8 +761,25 @@ Each sheet must contain a square adjacency matrix with identical node names.
 # -----------------------------------------------------------
 # FILE UPLOAD
 # -----------------------------------------------------------
-file = st.file_uploader("Upload Excel File", type=["xlsx"], help="Upload your Excel file with Time, Cost, and Risk sheets")
+uploaded_file = st.file_uploader(
+    "Upload Excel File",
+    type=["xlsx"],
+    help="Upload your Excel file with Time, Cost, and Risk sheets"
+)
 
+use_default = st.button("Use Default File")
+
+file = None
+
+if uploaded_file is not None:
+    file = uploaded_file
+elif use_default:
+    default_path = os.path.join(os.path.dirname(__file__), "GoldMatrices.xlsx")
+    if os.path.exists(default_path):
+        file = default_path
+        st.success("Default matrix file loaded successfully.")
+    else:
+        st.error("Default file 'GoldMatrices.xlsx' was not found in the app folder.")
 if file:
     st.markdown("<div class='section-title'>Matrix Validation</div>", unsafe_allow_html=True)
     
