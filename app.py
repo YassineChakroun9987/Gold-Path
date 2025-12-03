@@ -546,11 +546,10 @@ def visualize_graph(graph, node_labels, title="Graph"):
         "overlap": "false",
         "splines": "true",
         "dpi": "96",
-        "ratio": "expand",
-        "size": "10,10!",
-        "pad": "1",
-        "margin": "0.5",
-        "bb": "0,0,10000,10000",
+        "ratio": "0.5",
+        "size": "6,6!",
+        "pad": "0.5",
+        "margin": "0.2",
         "bgcolor": "transparent"
     })
 
