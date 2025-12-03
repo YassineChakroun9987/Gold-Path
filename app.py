@@ -621,16 +621,38 @@ def visualize_graph(graph, node_labels, title="Graph"):
     # Convert SVG → PNG and display it
     # --------------------------------------------------
     
-    with open(filepath + ".svg", "r", encoding="utf-8") as f:
+    # Render SVG using Graphviz
+with tempfile.TemporaryDirectory() as tmpdir:
+    filepath = os.path.join(tmpdir, "graph")
+    dot.render(filepath, format="svg", cleanup=True)
+
+    # --------------------------------------------------
+    # Find the actual SVG file (Graphviz naming varies)
+    # --------------------------------------------------
+    svg_file = None
+    for fname in os.listdir(tmpdir):
+        if fname.endswith(".svg"):
+            svg_file = os.path.join(tmpdir, fname)
+            break
+
+    if svg_file is None:
+        st.error("SVG generation failed.")
+        return
+
+    # Read SVG contents
+    with open(svg_file, "r", encoding="utf-8") as f:
         svg_data = f.read()
-    
-    # Convert using bytestring (SAFE on Streamlit Cloud)
+
+    # --------------------------------------------------
+    # Convert SVG → PNG safely
+    # --------------------------------------------------
     import cairosvg
-    png_path = filepath + ".png"
+    png_path = os.path.join(tmpdir, "graph.png")
     cairosvg.svg2png(bytestring=svg_data.encode("utf-8"), write_to=png_path)
-    
+
     # Display PNG
     st.image(png_path, caption=title, use_container_width=True)
+
 
     
 
