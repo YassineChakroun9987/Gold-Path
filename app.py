@@ -761,6 +761,12 @@ Each sheet must contain a square adjacency matrix with identical node names.
 # -----------------------------------------------------------
 # FILE UPLOAD
 # -----------------------------------------------------------
+# -----------------------------------------------------------
+# FILE UPLOAD + DEFAULT BUTTON (PERSISTENT)
+# -----------------------------------------------------------
+if "input_file" not in st.session_state:
+    st.session_state.input_file = None
+
 uploaded_file = st.file_uploader(
     "Upload Excel File",
     type=["xlsx"],
@@ -769,17 +775,26 @@ uploaded_file = st.file_uploader(
 
 use_default = st.button("Use Default File")
 
-file = None
-
+# If user uploads a file
 if uploaded_file is not None:
-    file = uploaded_file
+    st.session_state.input_file = uploaded_file
+    st.success("Custom file loaded successfully.")
+
+# If user clicks "Use Default"
 elif use_default:
     default_path = os.path.join(os.path.dirname(__file__), "GoldMatrices.xlsx")
     if os.path.exists(default_path):
-        file = default_path
+        st.session_state.input_file = default_path
         st.success("Default matrix file loaded successfully.")
     else:
-        st.error("Default file 'GoldMatrices.xlsx' was not found in the app folder.")
+        st.error("Default file 'GoldMatrices.xlsx' was not found.")
+
+# Final file reference
+file = st.session_state.input_file
+
+if not file:
+    st.stop()
+
 if file:
     st.markdown("<div class='section-title'>Matrix Validation</div>", unsafe_allow_html=True)
     
