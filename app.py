@@ -542,18 +542,17 @@ def visualize_graph(graph, node_labels, title="Graph"):
     # -------------------------------------------------------------------
     dot = Digraph(engine="sfdp")
 
-    dot.attr(
-        overlap="false",
-        splines="true",
-        dpi="96",
-        ratio="fill",
-        nodesep="0.8",
-        ranksep="0.8",
-        K="1.0",
-        bgcolor="transparent",
-        size="",
-        bb=""
-    )
+    dot.graph_attr.update({
+        "overlap": "false",
+        "splines": "true",
+        "dpi": "96",
+        "ratio": "expand",
+        "size": "10,10!",
+        "pad": "1",
+        "margin": "0.5",
+        "bb": "0,0,10000,10000",
+        "bgcolor": "transparent"
+    })
 
     for i in range(V):
         dot.node(
