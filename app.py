@@ -546,12 +546,13 @@ def visualize_graph(graph, node_labels, title="Graph"):
         overlap="false",
         splines="true",
         dpi="96",
-        size="7",
-        ratio="compress",
-        nodesep="1.0",
-        ranksep="1.0",
-        K="0.8",
-        bgcolor="transparent"
+        ratio="fill",
+        nodesep="0.8",
+        ranksep="0.8",
+        K="1.0",
+        bgcolor="transparent",
+        size="",
+        bb=""
     )
 
     for i in range(V):
