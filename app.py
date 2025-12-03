@@ -629,29 +629,38 @@ with tempfile.TemporaryDirectory() as tmpdir:
     # --------------------------------------------------
     # Find the actual SVG file (Graphviz naming varies)
     # --------------------------------------------------
+    # Render SVG using Graphviz
+with tempfile.TemporaryDirectory() as tmpdir:
+    filepath = os.path.join(tmpdir, "graph")
+    dot.render(filepath, format="svg", cleanup=True)
+
+    # --------------------------------------------------
+    # Find the real SVG file written by Graphviz
+    # --------------------------------------------------
     svg_file = None
     for fname in os.listdir(tmpdir):
         if fname.endswith(".svg"):
             svg_file = os.path.join(tmpdir, fname)
             break
 
+    # If no SVG → stop gracefully
     if svg_file is None:
-        st.error("SVG generation failed.")
-        return
+        st.error("Graphviz did not generate an SVG file.")
+    else:
+        # Read SVG
+        with open(svg_file, "r", encoding="utf-8") as f:
+            svg_data = f.read()
 
-    # Read SVG contents
-    with open(svg_file, "r", encoding="utf-8") as f:
-        svg_data = f.read()
+        # --------------------------------------------------
+        # Convert SVG → PNG safely (Streamlit Cloud compatible)
+        # --------------------------------------------------
+        import cairosvg
+        png_path = os.path.join(tmpdir, "graph.png")
+        cairosvg.svg2png(bytestring=svg_data.encode("utf-8"), write_to=png_path)
 
-    # --------------------------------------------------
-    # Convert SVG → PNG safely
-    # --------------------------------------------------
-    import cairosvg
-    png_path = os.path.join(tmpdir, "graph.png")
-    cairosvg.svg2png(bytestring=svg_data.encode("utf-8"), write_to=png_path)
+        # Display PNG
+        st.image(png_path, caption=title, use_container_width=True)
 
-    # Display PNG
-    st.image(png_path, caption=title, use_container_width=True)
 
 
     
