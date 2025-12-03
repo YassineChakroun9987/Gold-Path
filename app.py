@@ -535,17 +535,17 @@ def visualize_graph(graph, node_labels, title="Graph"):
     node_colors = {str(i): dark_pastels[i % len(dark_pastels)] for i in range(V)}
 
     dot = Digraph(engine="neato")
-
-    # Better spacing but WITHOUT forcing huge size
+    
+    # REMOVE scaling from Graphviz - this is critical!
     dot.attr(
-        format="png",
         overlap="false",
         splines="true",
-        dpi="96",
-        ratio="compress",
-        nodesep="1.0",
-        ranksep="1.0",
-        K="0.8",
+        dpi="100",
+        ratio="auto",
+        nodesep="1.2",
+        ranksep="1.2",
+        size="10,10",  # Reduced size to prevent scaling
+        margin="0.5",
         bgcolor="transparent"
     )
 
@@ -558,7 +558,8 @@ def visualize_graph(graph, node_labels, title="Graph"):
             fillcolor=node_colors[str(i)],
             color="black",
             fontsize="16",
-            width="1.0"
+            width="0.8",
+            height="0.8"
         )
 
     for i in range(V):
@@ -570,7 +571,8 @@ def visualize_graph(graph, node_labels, title="Graph"):
                     color=node_colors[str(i)],
                     fontcolor=node_colors[str(i)],
                     arrowsize="0.9",
-                    fontsize="12"
+                    fontsize="12",
+                    penwidth="1.5"
                 )
 
     # Render SVG
@@ -581,52 +583,96 @@ def visualize_graph(graph, node_labels, title="Graph"):
             svg = f.read()
 
     # --------------------------------------------------
-    # 1. Extract original viewBox or width/height
+    # CRITICAL FIX: Remove the scale transform from the <g> element
+    # --------------------------------------------------
+    # Find and fix the transform that contains scale()
+    svg = re.sub(
+        r'transform="scale\([^)]+\)\s*',
+        'transform="',
+        svg
+    )
+    
+    # Also remove any other problematic transforms
+    svg = re.sub(
+        r'transform="scale\([^)]+\)\s*(rotate\([^)]+\))?\s*(translate\([^)]+\))?',
+        'transform="',
+        svg
+    )
+    
+    # If there's still a transform with translate but no scale, keep only translate
+    # but adjust the y-translate (which is causing the graph to be shifted down)
+    def fix_transform(match):
+        transform = match.group(1)
+        # Remove scale completely
+        if 'scale' in transform:
+            transform = re.sub(r'scale\([^)]+\)\s*', '', transform)
+        # Adjust translate if it's moving too far down
+        translate_match = re.search(r'translate\(([^)]+)\)', transform)
+        if translate_match:
+            coords = translate_match.group(1).split()
+            if len(coords) == 2:
+                try:
+                    x, y = float(coords[0]), float(coords[1])
+                    # If y is too large (like 680.47), reduce it significantly
+                    if y > 200:
+                        y = y / 10  # Reduce by factor of 10
+                    transform = re.sub(
+                        r'translate\([^)]+\)',
+                        f'translate({x} {y})',
+                        transform
+                    )
+                except:
+                    pass
+        return f'transform="{transform}"'
+    
+    svg = re.sub(r'transform="([^"]*)"', fix_transform, svg)
+    
+    # --------------------------------------------------
+    # Extract viewBox and normalize
     # --------------------------------------------------
     viewbox_match = re.search(r'viewBox="([\d\.\s\-]+)"', svg)
     if viewbox_match:
-        original_viewbox = viewbox_match.group(1)
-    else:
-        # fallback to width/height parsing
-        w = re.search(r'width="([\d\.]+)', svg)
-        h = re.search(r'height="([\d\.]+)', svg)
-        if w and h:
-            original_viewbox = f"0 0 {w.group(1)} {h.group(1)}"
-        else:
-            original_viewbox = "0 0 2000 1200"   # safe fallback
-
-    # --------------------------------------------------
-    # 2. Apply a NORMALIZED viewBox for scaling
-    # --------------------------------------------------
-    svg = re.sub(
-        r'viewBox="[^"]+"',
-        f'viewBox="{original_viewbox}"',
-        svg
-    )
-
+        vb_parts = viewbox_match.group(1).split()
+        if len(vb_parts) == 4:
+            try:
+                x, y, width, height = map(float, vb_parts)
+                # Compensate for any remaining scaling
+                if width < 300 or height < 300:
+                    # If viewBox is small, make it larger
+                    new_viewbox = f"0 0 {max(width, 800)} {max(height, 600)}"
+                else:
+                    new_viewbox = f"0 0 {width} {height}"
+                
+                svg = re.sub(
+                    r'viewBox="[^"]+"',
+                    f'viewBox="{new_viewbox}"',
+                    svg
+                )
+            except:
+                svg = re.sub(
+                    r'viewBox="[^"]+"',
+                    'viewBox="0 0 800 600"',
+                    svg
+                )
+    
     # Remove fixed width/height
     svg = re.sub(r'width="[^"]+"', 'width="100%"', svg)
     svg = re.sub(r'height="[^"]+"', 'height="100%"', svg)
-
-    # Force responsive mode
-    if "preserveAspectRatio" in svg:
-        svg = re.sub(r'preserveAspectRatio="[^"]+"',
-                     'preserveAspectRatio="xMidYMid meet"', svg)
-    else:
+    
+    # Ensure responsive scaling
+    if "preserveAspectRatio" not in svg:
         svg = svg.replace("<svg", '<svg preserveAspectRatio="xMidYMid meet"')
 
     # --------------------------------------------------
-    # 3. Streamlit container (NO CROPPING)
+    # Create container with proper scaling
     # --------------------------------------------------
-    initial_zoom = 0.20      # <<< TRY VALUES: 0.45, 0.35, 0.25, 0.20, 0.15, 0.10
-    initial_pan_x = 0        # <<< shift left/right (positive → right)
-    initial_pan_y = 0        # <<< shift up/down (positive → down)
-
+    # Use a fixed initial zoom that works for most graphs
+    initial_zoom = 0.8  # Start with 80% zoom (closer to actual size)
+    
     components.html(
         f"""
         <div style="
             width: 100%;
-            max-width: 1800px;
             height: 800px;
             margin: 0 auto;
             padding: 20px;
@@ -635,39 +681,60 @@ def visualize_graph(graph, node_labels, title="Graph"):
             border: 1px solid #e9ecef;
             box-shadow: 0 3px 12px rgba(0,0,0,0.05);
             overflow: hidden;
+            position: relative;
         ">
 
-            <div id="svg_container" style="width:100%; height:100%; overflow:hidden;">
+            <div id="svg_container" style="
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            ">
                 {svg}
             </div>
 
             <script src="https://cdnjs.cloudflare.com/ajax/libs/svg-pan-zoom/3.6.1/svg-pan-zoom.min.js"></script>
 
             <script>
-                const svgEl = document.querySelector('#svg_container svg');
-
-                // Make responsive
-                svgEl.removeAttribute('width');
-                svgEl.removeAttribute('height');
-                svgEl.style.width = "100%";
-                svgEl.style.height = "100%";
-
-                // Init pan/zoom
-                const instance = svgPanZoom(svgEl, {{
-                    zoomEnabled: true,
-                    controlIconsEnabled: true,
-                    fit: false,         // <<< IMPORTANT: disable auto fit so manual zoom works
-                    center: false,
-                    minZoom: 0.01,
-                    maxZoom: 10,
-                    contain: false
-                }});
-
-                // Apply manual zoom and pan
-                setTimeout(() => {{
-                    instance.zoom({initial_zoom});
-                    instance.pan({{ x: {initial_pan_x}, y: {initial_pan_y} }});
-                }}, 50);
+                (function() {{
+                    const container = document.querySelector('#svg_container');
+                    const svgEl = container.querySelector('svg');
+                    
+                    // Make absolutely sure SVG is responsive
+                    svgEl.removeAttribute('width');
+                    svgEl.removeAttribute('height');
+                    svgEl.style.width = '100%';
+                    svgEl.style.height = '100%';
+                    
+                    // Wait for DOM
+                    setTimeout(() => {{
+                        try {{
+                            const instance = svgPanZoom(svgEl, {{
+                                zoomEnabled: true,
+                                controlIconsEnabled: true,
+                                fit: false,  // DON'T auto-fit
+                                center: false,
+                                minZoom: 0.05,
+                                maxZoom: 10,
+                                contain: false,
+                                zoomScaleSensitivity: 0.4
+                            }});
+                            
+                            // Set zoom to show full graph
+                            instance.zoom({initial_zoom});
+                            instance.pan({{ x: 0, y: 0 }});
+                            
+                            // Debug info
+                            console.log('SVG viewBox:', svgEl.getAttribute('viewBox'));
+                            console.log('SVG dimensions:', svgEl.getBoundingClientRect());
+                            
+                        }} catch (error) {{
+                            console.error('SVG Pan Zoom error:', error);
+                        }}
+                    }}, 200);
+                }})();
             </script>
 
         </div>
@@ -675,7 +742,6 @@ def visualize_graph(graph, node_labels, title="Graph"):
         height=850,
         scrolling=False
     )
-
 # -----------------------------------------------------------
 # UI LAYOUT
 # -----------------------------------------------------------
